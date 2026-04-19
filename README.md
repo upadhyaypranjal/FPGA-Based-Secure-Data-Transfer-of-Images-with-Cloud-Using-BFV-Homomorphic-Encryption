@@ -185,35 +185,37 @@ bfv-fpga-secure-cloud/
 Sensitive visual data — medical imaging, satellite reconnaissance, industrial inspection — is routinely offloaded to cloud environments. However, **conventional cryptographic protocols have a fundamental flaw**:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CONVENTIONAL APPROACH                         │
+┌──────────────────────────────────────────────────────────────────┐
+│                      CONVENTIONAL APPROACH                       │
 │                                                                  │
-│  Client           Cloud Memory              Cloud CPU/GPU        │
-│  ┌─────┐          ┌──────────────┐          ┌─────────────┐     │
-│  │ Raw │ ─AES──►  │ DECRYPTED!   │ ────────► │  Operates   │     │
-│  │ IMG │  Encrypt │ ⚠️ EXPOSED   │           │  on Plain   │     │
-│  └─────┘          │   PIXELS    │           │   Text      │     │
-│                   └──────────────┘           └─────────────┘     │
-│                         ↑                                        │
-│              VULNERABILITY WINDOW — raw pixels                   │
-│              accessible to cloud admins, attackers               │
-└─────────────────────────────────────────────────────────────────┘
+│  Client            Cloud Memory              Cloud CPU/GPU       │
+│                                                                  │
+│  ┌─────┐          ┌──────────────┐          ┌─────────────┐      │
+│  │ Raw │ ──AES──► │  DECRYPTED!  │ ───────► │  Operates   │      │
+│  │ IMG │  Encrypt │  ⚠️ EXPOSED  │          │  on Plain   │      │
+│  └─────┘          │    PIXELS    │          │    Text     │      │
+│                   └──────────────┘          └─────────────┘      │
+│                          ↑                                       │
+│          VULNERABILITY WINDOW — raw pixels accessible            │
+│             to cloud admins and potential attackers              │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    BFV FHE APPROACH (THIS PROJECT)               │
+┌──────────────────────────────────────────────────────────────────┐
+│                 BFV FHE APPROACH (THIS PROJECT)                  │
 │                                                                  │
-│  FPGA Edge        Cloud Memory              Cloud CPU/GPU        │
-│  ┌─────┐          ┌──────────────┐          ┌─────────────┐     │
-│  │ Raw │ ─BFV──►  │ CIPHERTEXT   │ ────────► │  Homomorphic│     │
-│  │ IMG │  Encrypt │ ✅ ENCRYPTED │           │  Evaluation │     │
-│  └─────┘          │ always       │           │  on CIPHER  │     │
-│                   └──────────────┘           └─────────────┘     │
+│  FPGA Edge         Cloud Memory              Cloud CPU/GPU       │
 │                                                                  │
-│              ZERO TRUST BARRIER — cloud never sees pixels        │
-│              Computation happens ON the ciphertext               │
-└─────────────────────────────────────────────────────────────────┘
+│  ┌─────┐          ┌──────────────┐          ┌─────────────┐      │
+│  │ Raw │ ──BFV──► │  CIPHERTEXT  │ ───────► │ Homomorphic │      │
+│  │ IMG │  Encrypt │ ✅ ENCRYPTED │          │ Evaluation  │      │
+│  └─────┘          │    ALWAYS    │          │  ON CIPHER  │      │
+│                   └──────────────┘          └─────────────┘      │
+│                                                                  │
+│          ZERO TRUST BARRIER — cloud never sees pixels            │
+│             Computation happens ON the ciphertext                │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Why BFV Over Other Schemes?
@@ -308,30 +310,30 @@ Ephemeral key extraction:
 The complete system implements a **Hardware/Software co-design** across three distinct layers:
 
 ```
-╔═══════════════════════════════════════════════════════════════════════════════╗
-║                    END-TO-END BFV SECURE PIPELINE                             ║
-╠═══════════════════════════════════════════════════════════════════════════════╣
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                    END-TO-END BFV SECURE PIPELINE                              ║
+╠════════════════════════════════════════════════════════════════════════════════╣
 ║                                                                                ║
-║  ┌──────────────┐    ┌────────────────────────────────┐    ┌────────────────┐ ║
+║  ┌──────────────┐    ┌─────────────────────────────────┐    ┌────────────────┐ ║
 ║  │  HOST PC     │    │     FPGA SENDER BOARD           │    │  CLOUD         │ ║
-║  │              │    │  ┌──────────┐  ┌────────────┐  │    │  (GitHub Gist) │ ║
-║  │ image.png    │    │  │ ARM PS   │  │ BFV Encrypt│  │    │                │ ║
-║  │     │        │    │  │ Cortex-A9│  │ AXI IP     │  │    │  Ciphertext    │ ║
-║  │ Python ──────┼───►│  │          │◄►│ (PL)       │  │    │  .mem file     │ ║
-║  │ image_       │    │  │ AXI-Lite │  │            │  │    │  (encrypted)   │ ║
-║  │ converter.py │    │  │ Control  │  │ DSP48 slices│ │    │                │ ║
-║  │              │    │  └──────────┘  └────────────┘  │    └───────┬────────┘ ║
-║  │              │    │        │ UART 115200 baud        │           │          ║
-║  └──────────────┘    └────────┼───────────────────────┘           │          ║
-║                               │                                    │          ║
-║  ┌──────────────┐    ┌────────▼──────────┐              ┌──────────▼────────┐ ║
-║  │  RECEIVER PC │    │  capture_uart.py   │              │  push_to_gist.py  │ ║
-║  │              │    │  output_combined   │◄─────────────│  HTTPS POST API   │ ║
-║  │ decrypt.py   │◄───│  .mem              │              └───────────────────┘ ║
-║  │ 100% match   │    └───────────────────┘                                    ║
+║  │              │    │  ┌──────────┐  ┌──────────────┐ │    │  (GitHub Gist) │ ║
+║  │ image.png    │    │  │ ARM PS   │  │ BFV Encrypt  │ │    │                │ ║
+║  │     │        │    │  │ Cortex-A9│  │ AXI IP       │ │    │  Ciphertext    │ ║
+║  │ Python       │ ──►│  │          │◄►│ (PL)         │ │    │  .mem file     │ ║
+║  │ image_       │    │  │ AXI-Lite │  │              │ │    │  (encrypted)   │ ║
+║  │ converter.py │    │  │ Control  │  │ DSP48 slices │ │    │                │ ║
+║  │              │    │  └──────────┘  └──────────────┘ │    └───────┬────────┘ ║
+║  │              │    │        │ UART 115200 baud       │            │          ║
+║  └──────────────┘    └────────┼────────────────────────┘            │          ║
+║                               │                                     │          ║
+║  ┌──────────────┐    ┌────────▼──────────┐              ┌───────────▼───────┐  ║
+║  │  RECEIVER PC │    │  capture_uart.py  │              │  push_to_gist.py  │  ║
+║  │              │    │  output_combined  │◄─────────────│  HTTPS POST API   │  ║
+║  │ decrypt.py   │◄───│  .mem             │              └───────────────────┘  ║
+║  │ 100% match   │    └───────────────────┘                                     ║
 ║  └──────────────┘                                                              ║
 ║                                                                                ║
-╚═══════════════════════════════════════════════════════════════════════════════╝
+╚════════════════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
@@ -545,15 +547,15 @@ Three sequential stages bridge the FPGA to the cloud:
 
 ```
 Stage 1: UART Capture          Stage 2: Cloud Upload         Stage 3: Recipient Download
-┌──────────────────────┐       ┌─────────────────────┐      ┌─────────────────────────┐
-│ capture_uart.py      │       │ push_to_gist.py      │      │ decrypt_verify.py        │
-│                      │       │                      │      │                          │
-│ • Listen on serial   │──────►│ • HTTPS POST to      │──────► • Download from Gist URL │
-│ • Detect %BFV_START% │       │   GitHub Gist API    │      │ • Run BFV decryption     │
-│ • Capture 4096 lines │       │ • TLS-encrypted      │      │ • Verify 100% match      │
-│ • Save .mem file     │       │ • Data stays         │      │ • Reconstruct image      │
-│ • Inline verify      │       │   encrypted          │      │                          │
-└──────────────────────┘       └─────────────────────┘      └─────────────────────────┘
+┌──────────────────────┐       ┌─────────────────────┐      ┌──────────────────────────┐
+│ capture_uart.py      │       │ push_to_gist.py     │      │ decrypt_verify.py        │
+│                      │       │                     │      │                          │
+│ • Listen on serial   │──────►│ • HTTPS POST to     │────► │ • Download from Gist URL │
+│ • Detect %BFV_START% │       │   GitHub Gist API   │      │ • Run BFV decryption     │
+│ • Capture 4096 lines │       │ • TLS-encrypted     │      │ • Verify 100% match      │
+│ • Save .mem file     │       │ • Data stays        │      │ • Reconstruct image      │
+│ • Inline verify      │       │   encrypted         │      │                          │
+└──────────────────────┘       └─────────────────────┘      └──────────────────────────┘
 ```
 
 **Security guarantee:** The cloud provider (GitHub) **cannot** intercept, interpret, or reverse-engineer the underlying pixel data — the FPGA encrypts locally before any network transmission.
@@ -592,8 +594,8 @@ BFV RTL Verilog
       │
       ▼
 ┌─────────────────────────────────────────────────────────┐
-│  1. Cadence NCLaunch    Pre-synthesis RTL simulation     │
-│  2. Cadence Genus 20.11 Logic synthesis → Gate netlist   │
+│  1. Cadence NCLaunch    Pre-synthesis RTL simulation    │
+│  2. Cadence Genus 20.11 Logic synthesis → Gate netlist  │
 │  3. Cadence Innovus 20.14 P&R → GDSII export            │
 └─────────────────────────────────────────────────────────┘
       │              │               │
@@ -767,10 +769,10 @@ A dedicated full-stack web portal provides a modern client-side interface for th
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                    BFV ENCRYPTION GATEWAY                         │
+│                    BFV ENCRYPTION GATEWAY                        │
 ├──────────────────────────────────────────────────────────────────┤
-│                                                                    │
-│  USER PORTAL            ADMIN GATEWAY          RECEIVER ACCESS    │
+│                                                                  │
+│  USER PORTAL            ADMIN GATEWAY          RECEIVER ACCESS   │
 │  ┌──────────────┐       ┌─────────────┐        ┌──────────────┐  │
 │  │ • Authenticate│      │ • Pipeline  │        │ • Download   │  │
 │  │ • Submit img  │      │   health    │        │   .mem files │  │
@@ -778,9 +780,9 @@ A dedicated full-stack web portal provides a modern client-side interface for th
 │  │   Pending→    │      │   payloads  │        │   keys       │  │
 │  │   Processed→  │      │ • Upload    │        │ • No raw img │  │
 │  │   Downloaded  │      │   .mem files│        │   access     │  │
-│  └──────────────┘       └─────────────┘        └──────────────┘  │
-│                                                                    │
-│  TASK LIFECYCLE:  Pending → Processing → Processed → Downloaded   │
+│  └───────────────┘      └─────────────┘        └──────────────┘  │
+│                                                                  │
+│  TASK LIFECYCLE:  Pending → Processing → Processed → Downloaded  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1005,7 +1007,7 @@ genus -f run_genus_pipelined_180.tcl
 
 <div align="center">
 
-**Made with ❤️ at IIITDM Kurnool · Electronics & Communications Engineering**
+**Made with ❤️ at Indian Institute of Information Technology Design and Manufacturing, Kurnool · Electronics & Communications Engineering**
 
 *Product Design Practise (ID-351) · March 2026*
 
